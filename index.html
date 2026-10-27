@@ -34,7 +34,10 @@ h1{font-size:21px;margin:0;font-weight:700;letter-spacing:.02em}
 .sub{color:var(--muted);font-size:12px}
 select,input,textarea,button{font:inherit;color:inherit}
 select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
-.hdr-r{display:flex;gap:6px;align-items:center}
+.hdr-r{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.difflist{display:flex;flex-direction:column;gap:4px;font-size:13px;margin-top:8px}
+.difflist .o{color:var(--muted);text-decoration:line-through}
+.difflist .k{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .panel{background:var(--surface);border:2px solid var(--accent);border-radius:12px;padding:14px;margin-top:12px;display:flex;flex-direction:column;gap:10px}
 .panel h2{font-size:16px;margin:0}
 .panel .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -129,7 +132,7 @@ textarea{min-height:70px;resize:vertical;font-size:14px}
 <header>
   <div class="top">
     <div><h1 id="ttl">班表</h1><div class="sub" id="subt">門診內科組</div></div>
-    <div class="hdr-r"><select id="mSel" aria-label="切換月份"></select><button class="ghost" id="bImpX">匯入班表</button></div>
+    <div class="hdr-r"><select id="mSel" aria-label="切換月份"></select><button class="ghost" id="bImpX">匯入班表</button><button class="ghost" id="bImpD">匯入門診表</button></div>
   </div>
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" id="tabList" aria-selected="true">每日班表</button>
@@ -144,14 +147,15 @@ textarea{min-height:70px;resize:vertical;font-size:14px}
 <div class="toast" id="toast" hidden></div>
 <input type="file" id="fileIn" accept="application/json,.json" hidden>
 <input type="file" id="xlsIn" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+<input type="file" id="docIn" accept=".xlsx,.xlsm,.csv,.txt,.json,application/json,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
 
 <script>
 /* 內建資料:診間科別與 10 月門診表醫師(不含任何班表或同事資料) */
 const DEPT={"212":["內分泌暨新陳代謝科"],"223":["內分泌暨新陳代謝科"],"214":["胃腸肝膽內科"],"215":["胃腸肝膽內科"],"216":["胃腸肝膽內科"],"217":["胃腸肝膽內科"],"218":["血液腫瘤科","風濕免疫科"],"219":["血液腫瘤科"],"220":["一般內科","心臟內科","風濕免疫科"],"221":["感染科"],"224":["腎臟內科"],"225":["腎臟內科"],"229":["心臟內科"],"230":["心臟內科"],"231":["心臟內科"],"232":["心臟內科"],"234":["心臟內科"],"233":["神經內科","內分泌暨新陳代謝科"],"235":["麻醉/疼痛科","心臟內科"],"249":["神經內科"],"250":["神經內科"],"252":["神經內科"],"254":["家庭醫學科","精神科"],"255":["家庭醫學科"],"265":["精神科"],"266":["精神科"],"205":["胸腔內科"],"205A":["胸腔內科"],"206":["胸腔內科"],"1302":["心臟內科"],"306":["皮膚科"],"314":["泌尿科","智慧科學體重管理中心"],"312":["血液腫瘤科"]};
 const DEPT_OVR={"233|三|A":["神經內科"],"235|三|A":[]};
 const DOCTBL={"212|二|A":{"st":"ok","names":["陳芳瑜"],"note":""},"212|三|B":{"st":"ok","names":["陳芳瑜"],"note":""},"212|四|A":{"st":"ok","names":["郭俊亨"],"note":""},"212|四|B":{"st":"ok","names":["裴駒"],"note":"14:00 開始看診,16:30 截止報到"},"214|二|B":{"st":"ok","names":["陳昱宗"],"note":""},"214|三|B":{"st":"ok","names":["邱毓澤"],"note":""},"215|五|A":{"st":"ok","names":["凌澤民"],"note":""},"216|二|B":{"st":"ok","names":["黃俊穎"],"note":""},"216|四|B":{"st":"ok","names":["李輔仁"],"note":""},"219|三|A":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"},"221|四|A":{"st":"ok","names":["李宜謙"],"note":""},"221|五|B":{"st":"ok","names":["王宇平"],"note":""},"223|一|B":{"st":"ok","names":["郭俊亨"],"note":""},"223|二|A":{"st":"ok","names":["郭俊亨"],"note":""},"223|五|A":{"st":"cond","names":["郭俊亨"],"note":"10 月表註明僅 10/16、10/23 看診,11 月是否相同需確認"},"223|五|B":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"},"224|一|A":{"st":"ok","names":["盧建霖"],"note":""},"224|五|A":{"st":"ok","names":["簡明弘"],"note":""},"225|一|A":{"st":"ok","names":["簡明弘"],"note":""},"225|三|A":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"},"225|六|A":{"st":"tbc","names":[],"note":"10 月週六輪值:李宗育(10/3、10/31)、高芷華(10/24),11/7 輪到誰需確認"},"229|一|A":{"st":"ok","names":["葉東峰"],"note":""},"229|五|B":{"st":"ok","names":["蔡天堯"],"note":""},"230|五|A":{"st":"ok","names":["莊宗達"],"note":""},"230|五|B":{"st":"ok","names":["施振祥"],"note":""},"231|三|B":{"st":"ok","names":["莊宗達"],"note":""},"231|四|B":{"st":"ok","names":["葉東峰"],"note":""},"232|一|A":{"st":"ok","names":["林冠佑"],"note":""},"233|三|A":{"st":"ok","names":["陳彥銘"],"note":"10 月表內分泌列另有黃俐穎標示「235 診」"},"234|四|A":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"},"235|三|A":{"st":"tbc","names":[],"note":"10 月表內分泌列標示黃俐穎在 235 診,心臟內科與麻醉疼痛科此時段無人,請對照 11 月門診表"},"255|一|B":{"st":"ok","names":["林嘉俊"],"note":""},"255|二|B":{"st":"ok","names":["沈偉宏"],"note":""},"255|四|A":{"st":"ok","names":["林敬偉"],"note":""},"255|六|A":{"st":"ok","names":["林嘉俊"],"note":""},"265|三|B":{"st":"tbc","names":[],"note":"10 月表只有張達人,且註明僅 10/14、10/28 看診"},"306|四|B":{"st":"ok","names":["羅婉心"],"note":"限約診"},"314|二|B":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"}};
-const DOC_SOURCE='10 月門診表(參考)';
-const KEY='zwq_records_v2', KEY_M='zwq_months_v2', KEY_D='zwq_docmap_v2', KEY_N='zwq_name_v2';
+let DOC_SOURCE='10 月門診表(參考)';
+const KEY='zwq_records_v2', KEY_M='zwq_months_v2', KEY_D='zwq_docmap_v2', KEY_N='zwq_name_v2', KEY_S='zwq_docsrc_v2';
 const SN={A:'早診',B:'午診',C:'夜診'};
 const WD=['日','一','二','三','四','五','六'];
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -162,6 +166,7 @@ function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){storag
 let R=load(KEY,{}), MONTHS=load(KEY_M,{}), UMAP=load(KEY_D,{});
 let NAME=''; try{NAME=localStorage.getItem(KEY_N)||''}catch(e){}
 if(!NAME)NAME='張琬晴';
+try{DOC_SOURCE=localStorage.getItem(KEY_S)||DOC_SOURCE}catch(e){}
 let ym=null, view='list', open=new Set(), pending=null;
 const yms=()=>Object.keys(MONTHS).sort();
 const mon=()=>MONTHS[ym];
@@ -297,7 +302,7 @@ function statHtml(){
   <div class="todo">${s.unchk.length?s.unchk.map(d=>`<button data-go="${d}">${m}/${d}</button>`).join(''):'<span class="offtxt">沒有</span>'}</div>
   <div class="sec">醫師待確認</div><div class="hint">${s.tbc} 個班的醫師無法從門診表確認,已標「待確認」。</div>
   <div class="sec">資料與備份</div>
-  <div class="tools"><button class="ghost" id="bCsv">匯出 CSV</button><button class="ghost" id="bJson">備份 JSON</button><button class="ghost" id="bImp">匯入備份</button></div>
+  <div class="tools"><button class="ghost" id="bCsv">匯出 CSV</button><button class="ghost" id="bJson">備份 JSON</button><button class="ghost" id="bImp">匯入備份</button><button class="ghost" id="bImpD2">匯入門診表</button></div>
   <div class="hint" style="margin-top:8px">資料只存在這支手機的瀏覽器裡,清除瀏覽資料或換手機會消失,請定期備份。匯入備份不會覆蓋已填的欄位。備份檔也可放入醫師對照檔(doctors.json)。</div>`;
 }
 
@@ -346,6 +351,7 @@ $('main').addEventListener('click',ev=>{
   if(t.id==='bCsv')exportCsv();
   if(t.id==='bJson')exportJson();
   if(t.id==='bImp')$('fileIn').click();
+  if(t.id==='bImpD2'){openDocImport();window.scrollTo(0,0)}
 });
 $('main').addEventListener('input',ev=>{
   const t=ev.target;if(!t.dataset||!t.dataset.f||t.type==='checkbox')return;
@@ -431,16 +437,16 @@ async function readXlsx(buf){
   }
   const colNum=ref=>{let c=0;for(const ch of ref.replace(/\d/g,''))c=c*26+ch.charCodeAt(0)-64;return c};
   async function sheetCells(path){
-    const doc=xml(await text(path)),cells={};let maxR=0;
+    const doc=xml(await text(path)),cells={};let maxR=0,maxC=0;
     for(const c of doc.getElementsByTagName('c')){
       const ref=c.getAttribute('r'),t=c.getAttribute('t'),vEl=c.getElementsByTagName('v')[0];
       let v=null;
       if(t==='inlineStr')v=[...c.getElementsByTagName('t')].map(x=>x.textContent).join('');
       else if(vEl){const raw=vEl.textContent;v=t==='s'?ss[+raw]:(t==='str'||t==='e'||t==='b')?raw:Number(raw)}
       if(v===null||v==='')continue;
-      const r=+ref.replace(/\D/g,''),cc=colNum(ref);cells[r+','+cc]=v;if(r>maxR)maxR=r;
+      const r=+ref.replace(/\D/g,''),cc=colNum(ref);cells[r+','+cc]=v;if(r>maxR)maxR=r;if(cc>maxC)maxC=cc;
     }
-    return {get:(r,c)=>{const v=cells[r+','+c];return v===undefined?null:v},maxR};
+    return {get:(r,c)=>{const v=cells[r+','+c];return v===undefined?null:v},maxR,maxC};
   }
   return {sheets,sheetCells};
 }
@@ -558,6 +564,245 @@ $('impPanel').addEventListener('click',ev=>{
 $('impPanel').addEventListener('change',ev=>{
   if(ev.target.id==='impSel'){pending.sel=ev.target.value?+ev.target.value:null;analyze()}
   if(ev.target.id==='impName'){const v=ev.target.value.trim();if(v){NAME=v;pending.sel=null;analyze()}}
+});
+
+/* ---------- clinic table (doctor map) import ---------- */
+const cl=v=>String(v==null?'':v).replace(/\s+/g,'');
+const normWd=s=>{const m=cl(s).match(/^(?:週|周|星期)?([一二三四五六日])$/);return m?m[1]:null};
+function normShift(s){
+  s=cl(s).replace(/[診班]/g,'');
+  if(/^(A|早|上午|晨)$/i.test(s))return 'A';
+  if(/^(B|午|下午)$/i.test(s))return 'B';
+  if(/^(C|夜|晚|晚上|夜間)$/i.test(s))return 'C';
+  return null;
+}
+function hdrCell(t){
+  const m=cl(t).match(/^(?:週|周|星期)?([一二三四五六日])(.*)$/);if(!m)return null;
+  const sh=m[2]?normShift(m[2]):null;if(m[2]&&!sh)return null;
+  return {wd:m[1],sh};
+}
+const ROOMRE='(\\d{3}A?|1\\d{3})';
+function roomIn(t){
+  t=String(t==null?'':t).trim();if(!t)return null;
+  const m=t.match(new RegExp('^\\D{0,3}'+ROOMRE+'\\s*診?$','i'))||t.match(new RegExp('(?:^|\\D)'+ROOMRE+'\\s*診','i'));
+  return m?m[1].toUpperCase():null;
+}
+function parseDocCell(v){
+  let s=String(v==null?'':v).replace(/\r/g,'').trim();
+  if(!s||/^[-—–xX×停休無\/／]+$/.test(s))return null;
+  let room=null;const rm=s.match(new RegExp(ROOMRE+'\\s*診','i'));
+  if(rm){room=rm[1].toUpperCase();s=s.replace(rm[0],' ')}
+  const notes=[];
+  s=s.replace(/[\(（]([^\)）]*)[\)）]/g,(_,t)=>{t=t.trim();if(t)notes.push(t);return ' '});
+  const names=[],extra=[];
+  for(const t of s.split(/[\n、,，;；\/／\s]+/)){
+    if(!t)continue;
+    if(/^[一-鿿A-Za-z·]{2,8}$/.test(t)&&!/[診僅限看約停休假班科室週輪起至]/.test(t))names.push(t);else extra.push(t);
+  }
+  const all=notes.concat(extra.filter(t=>/[\d僅限約輪起至]/.test(t)));
+  const cond=all.some(t=>/\d{1,2}\/\d{1,2}|\d{1,2}月|僅|輪|單週|雙週|隔週|第.週/.test(t));
+  return {names,note:all.join(';'),cond,room};
+}
+function addEntry(out,key,c){
+  const e=c.names.length?{st:c.cond?'cond':'ok',names:c.names.slice(),note:c.note}:(c.note?{st:'tbc',names:[],note:c.note}:null);
+  if(!e)return false;
+  const o=out[key];
+  if(!o){out[key]=e;return true}
+  for(const n of e.names)if(!o.names.includes(n))o.names.push(n);
+  if(e.note&&!o.note.includes(e.note))o.note=o.note?o.note+';'+e.note:e.note;
+  o.st=o.names.length?((o.st==='cond'||e.st==='cond')?'cond':'ok'):'tbc';
+  return true;
+}
+/* grid layout: rows = clinic rooms, columns = weekday x shift, cells = doctors */
+function parseDocGrid(G){
+  const {g,R,C}=G,out={};let skip=0;
+  let wr=0;
+  for(let r=1;r<=Math.min(R,15)&&!wr;r++){let n=0;for(let c=1;c<=C;c++)if(hdrCell(g(r,c)))n++;if(n>=2)wr=r}
+  if(!wr)return {out,skip,mode:'grid'};
+  let sr=wr,best=0;
+  for(const r of [wr,wr+1,wr-1]){if(r<1)continue;let n=0;for(let c=1;c<=C;c++)if(normShift(g(r,c)))n++;if(n>best){best=n;sr=r}}
+  const cols={};let curWd=null,curSh=null;
+  for(let c=1;c<=C;c++){
+    const raw=g(wr,c),h=hdrCell(raw);
+    if(h){curWd=h.wd;curSh=h.sh}else if(raw!=null&&String(raw).trim())curWd=null;
+    const sh=(sr!==wr?normShift(g(sr,c)):null)||(sr===wr?normShift(g(sr,c)):null)||(h&&h.sh)||null;
+    if(curWd&&sh)cols[c]={wd:curWd,sh};
+  }
+  const cs=Object.keys(cols).map(Number);if(!cs.length)return {out,skip,mode:'grid'};
+  const minC=Math.min(...cs);let rowRoom=null;
+  for(let r=Math.max(wr,sr)+1;r<=R;r++){
+    let left=false,found=null;
+    for(let c=1;c<minC;c++){const t=g(r,c);if(t!=null&&String(t).trim()){left=true;const x=roomIn(t);if(x)found=x}}
+    if(found)rowRoom=found;else if(left)rowRoom=null;
+    for(const c of cs){
+      const v=g(r,c);if(v==null||!String(v).trim())continue;
+      const p=parseDocCell(v);if(!p)continue;
+      const room=p.room||rowRoom;if(!room){skip++;continue}
+      if(!addEntry(out,`${room}|${cols[c].wd}|${cols[c].sh}`,p))skip++;
+    }
+  }
+  return {out,skip,mode:'grid'};
+}
+/* list layout: columns = room, weekday, shift, doctor */
+function parseDocLong(G){
+  const {g,R,C}=G,out={};let skip=0,hr=0,ci={};
+  for(let r=1;r<=Math.min(R,10)&&!hr;r++){
+    const m={};
+    for(let c=1;c<=C;c++){
+      const t=cl(g(r,c));if(!t)continue;
+      if(/診間|診號|診室/.test(t))m.room=c;
+      else if(/星期|週別|週次|^週$|^星期$/.test(t))m.wd=c;
+      else if(/時段|班別|診別|午別|上下午/.test(t))m.sh=c;
+      else if(/醫師|醫生/.test(t))m.doc=c;
+    }
+    if(m.room&&m.wd&&m.sh&&m.doc){hr=r;ci=m}
+  }
+  if(!hr)return {out,skip,mode:'list'};
+  for(let r=hr+1;r<=R;r++){
+    const room=roomIn(g(r,ci.room))||(String(g(r,ci.room)||'').trim().match(new RegExp('^'+ROOMRE+'$','i'))||[])[1],wd=normWd(g(r,ci.wd)),sh=normShift(g(r,ci.sh));
+    const p=parseDocCell(g(r,ci.doc));
+    if(!room||!wd||!sh||!p){if(g(r,ci.doc)!=null&&String(g(r,ci.doc)).trim())skip++;continue}
+    if(!addEntry(out,`${String(room).toUpperCase()}|${wd}|${sh}`,p))skip++;
+  }
+  return {out,skip,mode:'list'};
+}
+function parseDocLines(text){
+  const out={};let skip=0;
+  const re=new RegExp('(?:^|\\D)'+ROOMRE+'\\s*診?[\\s,，:：|]*(?:週|周|星期)?([一二三四五六日])[\\s,，:：|]*(上午|下午|晚上|夜間|早|午|夜|A|B|C)[診班]?[\\s,，:：|]*(.*)$','i');
+  for(const line of text.split(/\n/)){
+    if(!line.trim())continue;
+    const m=line.match(re);if(!m){skip++;continue}
+    const p=parseDocCell(m[4]);const sh=normShift(m[3]);
+    if(!p||!sh||!addEntry(out,`${m[1].toUpperCase()}|${m[2]}|${sh}`,p))skip++;
+  }
+  return {out,skip,mode:'lines'};
+}
+function bestOf(...rs){return rs.sort((a,b)=>Object.keys(b.out).length-Object.keys(a.out).length)[0]}
+function parseDocGrids(grids){
+  const rs=grids.map(G=>({...bestOf(parseDocGrid(G),parseDocLong(G)),name:G.name||''}));
+  const ok=rs.filter(r=>Object.keys(r.out).length).sort((a,b)=>Object.keys(b.out).length-Object.keys(a.out).length);
+  if(!ok.length)return {entries:{},skip:0,info:''};
+  const b=ok[0];
+  return {entries:b.out,skip:b.skip,info:`工作表「${b.name}」(${b.mode==='list'?'清單格式':'表格格式'})${ok.length>1?`;檔案內另有 ${ok.length-1} 張工作表也有資料,目前只用資料最多的這張`:''}`};
+}
+function delimGrid(text){
+  const first=text.split('\n').find(x=>x.trim())||'';
+  const d=first.includes('\t')?'\t':',',rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}
+    else if(ch==='"')q=true;
+    else if(ch===d){row.push(cur);cur=''}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur=''}
+    else cur+=ch;
+  }
+  if(cur||row.length){row.push(cur);rows.push(row)}
+  const C=Math.max(0,...rows.map(r=>r.length));
+  return {g:(r,c)=>{const v=(rows[r-1]||[])[c-1];return v===undefined||v===''?null:v},R:rows.length,C,name:'文字'};
+}
+function parseDocText(text){
+  text=text.replace(/^﻿/,'');
+  const a=parseDocLines(text),G=delimGrid(text),b=bestOf(parseDocGrid(G),parseDocLong(G));
+  const w=bestOf(a,b);
+  return {entries:w.out,skip:w.skip,info:w.mode==='lines'?'逐行文字':(w.mode==='list'?'清單格式':'表格格式')};
+}
+function parseDocJson(j){
+  const d=(j&&j.doctors)||j||{},entries={};let skip=0;
+  for(const [k,v] of Object.entries(d)){
+    if(/^[0-9A-Z]+\|[一二三四五六日]\|[ABC]$/.test(k)&&v&&Array.isArray(v.names))entries[k]={st:v.st||(v.names.length?'ok':'tbc'),names:v.names.map(String),note:String(v.note||'')};else skip++;
+  }
+  return {entries,skip,info:'備份 / 醫師對照 JSON'};
+}
+let pendingDoc=null;
+const keyTxt=k=>{const [r,w,s]=k.split('|');return `${r} 診 週${w} ${SN[s]}`};
+const docTxt=x=>x?(x.names.length?x.names.join('、')+(x.st==='cond'?'(日期條件)':''):'待確認'):'—';
+function nextMap(p){
+  const m=Object.assign({},UMAP);
+  if(p.replace)for(const k of Object.keys(Object.assign({},DOCTBL,UMAP)))if(!p.entries[k])m[k]={st:'tbc',names:[],note:'新門診表沒有這個時段'};
+  for(const [k,v] of Object.entries(p.entries))m[k]=v;
+  return m;
+}
+function tbcNow(map){
+  if(!ym)return null;
+  const o=UMAP;UMAP=map;let n=0;
+  try{for(const e of mon().days)for(const k of shiftKeys(e))if(docInfo(e.d,k,e).kind==='tbc')n++}finally{UMAP=o}
+  return n;
+}
+function diffDoc(ent){
+  const rows=[];let nNew=0,nChg=0,nSame=0;
+  for(const [k,v] of Object.entries(ent)){
+    const old=UMAP[k]||DOCTBL[k];
+    if(!old){nNew++;rows.push([k,'',docTxt(v)])}
+    else if(old.st===v.st&&old.names.join('|')===v.names.join('|'))nSame++;
+    else{nChg++;rows.push([k,docTxt(old),docTxt(v)])}
+  }
+  const missing=Object.entries(Object.assign({},DOCTBL,UMAP)).filter(([k,x])=>!ent[k]&&x.names&&x.names.length).length;
+  rows.sort((a,b)=>a[0].localeCompare(b[0]));
+  return {rows,nNew,nChg,nSame,missing};
+}
+function openDocImport(){
+  pendingDoc=null;
+  showPanel(`<h2>匯入門診表</h2><div class="hint">匯入後,班表裡的醫師會依「診間 + 星期 + 時段」更新。支援 Excel(.xlsx)、CSV、備份 JSON,或直接貼上文字。檔案只在這支手機上讀取,不會上傳。</div>
+  <div class="row"><button class="pri" data-doc="pick">選擇檔案</button><button class="ghost" data-doc="cancel">取消</button></div>
+  <details class="more"><summary>改用貼上文字</summary><textarea id="docTxt" placeholder="每行一個時段,例:&#10;212 週二 早 陳芳瑜&#10;214 週三 午 邱毓澤、王小明"></textarea><div class="row" style="margin-top:8px"><button class="ghost" data-doc="paste">解析貼上的文字</button></div></details>
+  <div class="hint">表格格式:每列是診間(或格子裡寫「212診」),欄位是星期 × 早/午/夜,格子是醫師。也支援「診間、星期、時段、醫師」四欄清單。</div>`);
+}
+function docFail(msg){
+  pendingDoc=null;
+  showPanel(`<h2>沒有解析到門診資料</h2><div class="hint">${esc(msg||'')}</div><div class="hint">請確認檔案有「診間號碼」「星期」「早/午/夜」與醫師姓名,或改用貼上文字(每行:診間 星期 時段 醫師)。</div><div class="row"><button class="pri" data-doc="pick">重新選擇檔案</button><button class="ghost" data-doc="cancel">關閉</button></div>`);
+}
+function startDocPreview(res,label){
+  if(!Object.keys(res.entries).length){docFail('');return}
+  pendingDoc={entries:res.entries,skip:res.skip,info:res.info,label,replace:false};
+  renderDocPreview();
+}
+function renderDocPreview(){
+  const p=pendingDoc,d=diffDoc(p.entries),n=Object.keys(p.entries).length;
+  const b=tbcNow(UMAP),a=tbcNow(nextMap(p));
+  showPanel(`<h2>匯入門診表</h2><div class="hint">${esc(p.info)}${p.skip?`;有 ${p.skip} 筆無法判讀,已略過`:''}</div>
+  <div class="tiles"><div class="tile"><div class="k">解析到時段</div><div class="v">${n}</div></div><div class="tile"><div class="k">與目前資料比較</div><div class="hint" style="font-size:14px;color:var(--ink)">新增 ${d.nNew} · 變更 ${d.nChg} · 相同 ${d.nSame}</div></div></div>
+  ${b!==null?`<div class="hint">本月班表「醫師待確認」:${b} 個 → ${a} 個</div>`:''}
+  <div class="row"><label class="hint">來源名稱</label><input type="text" id="docLbl" value="${esc(p.label)}"></div>
+  ${d.missing?`<label class="chk"><input type="checkbox" id="docRep" ${p.replace?'checked':''}><span>取代舊門診表<br><small>目前有、新表沒有的 ${d.missing} 個時段改為「待確認」</small></span></label>`:''}
+  ${d.rows.length?`<details class="more"><summary>查看新增與變更(${d.rows.length})</summary><div class="difflist">${d.rows.slice(0,60).map(r=>`<div><span class="k">${esc(keyTxt(r[0]))}</span><br>${r[1]?`<span class="o">${esc(r[1])}</span> → `:''}${esc(r[2])}</div>`).join('')}${d.rows.length>60?`<div class="hint">…還有 ${d.rows.length-60} 筆</div>`:''}</div></details>`:''}
+  <div class="hint">手動在班表內修正的醫師姓名(每班「手動修正」)不會被覆蓋。</div>
+  <div class="row"><button class="pri" data-doc="ok">確認匯入</button><button class="ghost" data-doc="cancel">取消</button></div>`);
+}
+async function decodeText(buf){
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(buf)}
+  catch(e){try{return new TextDecoder('big5').decode(buf)}catch(e2){return new TextDecoder().decode(buf)}}
+}
+$('bImpD').onclick=()=>{openDocImport();window.scrollTo(0,0)};
+$('docIn').onchange=async ev=>{
+  const f=ev.target.files[0];ev.target.value='';if(!f)return;
+  try{
+    const ext=(f.name.split('.').pop()||'').toLowerCase(),label=f.name.replace(/\.[^.]+$/,'');let res;
+    if(ext==='xlsx'||ext==='xlsm'){
+      const x=await readXlsx(await f.arrayBuffer()),grids=[];
+      for(const s of x.sheets){try{const sh=await x.sheetCells(s.path);grids.push({g:sh.get,R:sh.maxR,C:sh.maxC,name:s.name})}catch(e){}}
+      res=parseDocGrids(grids);
+    }else if(ext==='json')res=parseDocJson(JSON.parse(await decodeText(await f.arrayBuffer())));
+    else res=parseDocText(await decodeText(await f.arrayBuffer()));
+    startDocPreview(res,label);
+  }catch(e){docFail(e.message||String(e))}
+};
+$('impPanel').addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-doc]');if(!b)return;
+  const a=b.dataset.doc;
+  if(a==='cancel'){pendingDoc=null;showPanel('')}
+  if(a==='pick')$('docIn').click();
+  if(a==='paste'){const t=$('docTxt').value;if(!t.trim()){toast('請先貼上文字');return}startDocPreview(parseDocText(t),'貼上的門診表')}
+  if(a==='ok'&&pendingDoc){
+    const p=pendingDoc,lbl=($('docLbl').value||'').trim()||p.label||'匯入的門診表';
+    const m=nextMap(p);for(const k of Object.keys(m))UMAP[k]=m[k];
+    DOC_SOURCE=lbl;try{localStorage.setItem(KEY_S,DOC_SOURCE)}catch(e){}
+    save(KEY_D,UMAP);const n=Object.keys(p.entries).length;pendingDoc=null;showPanel('');render();toast(`已匯入門診表(${n} 個時段)`);
+  }
+});
+$('impPanel').addEventListener('change',ev=>{
+  if(!pendingDoc)return;
+  if(ev.target.id==='docLbl')pendingDoc.label=ev.target.value;
+  if(ev.target.id==='docRep'){const l=$('docLbl');if(l)pendingDoc.label=l.value;pendingDoc.replace=ev.target.checked;renderDocPreview()}
 });
 
 pickYm();initOpen();render();
