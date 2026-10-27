@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e6a73">
+<title>張琬晴班表</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: sticky header with month select, three tabs (list / calendar / stats); day cards expand in place */
+:root{
+  --bg:#eef3f4; --surface:#ffffff; --ink:#13272b; --muted:#566b70; --line:#d5e0e2; --accent:#0e6a73; --accent-ink:#ffffff;
+  --a:#a85a08; --a-bg:#fcebd3; --b:#0e6a73; --b-bg:#d3edf0; --c:#4640b0; --c-bg:#e3e2fa;
+  --warn:#b3261e; --warn-bg:#fbe3e0; --ok:#1d7a3a; --ok-bg:#dcf3e3; --tbc:#8a5a00; --tbc-bg:#fff0c9; --off:#e4eaeb;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1a1d; --surface:#15272b; --ink:#e4eff0; --muted:#8fa8ad; --line:#26393d; --accent:#52c2cc; --accent-ink:#06191c;
+  --a:#f0a95a; --a-bg:#3a2a12; --b:#5ccad4; --b-bg:#12353a; --c:#a5a2f5; --c-bg:#25244a;
+  --warn:#ff8b82; --warn-bg:#40201e; --ok:#79d494; --ok-bg:#16361f; --tbc:#f3c564; --tbc-bg:#3b2e0c; --off:#1b2d31; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1a1d; --surface:#15272b; --ink:#e4eff0; --muted:#8fa8ad; --line:#26393d; --accent:#52c2cc; --accent-ink:#06191c;
+  --a:#f0a95a; --a-bg:#3a2a12; --b:#5ccad4; --b-bg:#12353a; --c:#a5a2f5; --c-bg:#25244a;
+  --warn:#ff8b82; --warn-bg:#40201e; --ok:#79d494; --ok-bg:#16361f; --tbc:#f3c564; --tbc-bg:#3b2e0c; --off:#1b2d31; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;
+  padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:env(safe-area-inset-top,0px) calc(48px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:720px;margin:0 auto}
+header{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;padding-block:12px 0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font-size:21px;margin:0;font-weight:700;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:12px}
+select,input,textarea,button{font:inherit;color:inherit}
+select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+.hdr-r{display:flex;gap:6px;align-items:center}
+.panel{background:var(--surface);border:2px solid var(--accent);border-radius:12px;padding:14px;margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.panel h2{font-size:16px;margin:0}
+.panel .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.panel input[type=text]{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0;flex:1}
+button.pri{appearance:none;background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
+button.pri:disabled{opacity:.4;cursor:default}
+.empty-state{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.tabs{display:flex;gap:2px;margin-top:8px;border-bottom:1px solid var(--line)}
+.tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;font-weight:500;color:var(--muted);cursor:pointer}
+.tab[aria-selected=true]{color:var(--accent);border-color:var(--accent)}
+button.ghost{appearance:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer}
+button.ghost:hover{border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding-top:12px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.day.off{background:var(--off)}
+.day.today{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.sum{all:unset;box-sizing:border-box;display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;width:100%;padding:10px 12px;cursor:pointer}
+.sum:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.dt{text-align:center;line-height:1.15}
+.dt .n{font-family:var(--mono);font-size:19px;font-weight:600}
+.dt .w{font-size:12px;color:var(--muted)}
+.dt.we .w,.dt.we .n{color:var(--warn)}
+.lines{display:flex;flex-direction:column;gap:3px;min-width:0}
+.line{display:flex;gap:7px;align-items:baseline;min-width:0;font-size:14px}
+.badge{flex:none;font-weight:700;font-size:12px;width:22px;height:22px;border-radius:6px;display:inline-grid;place-items:center}
+.sA{background:var(--a-bg);color:var(--a)} .sB{background:var(--b-bg);color:var(--b)} .sC{background:var(--c-bg);color:var(--c)}
+.room{font-family:var(--mono);font-weight:600;flex:none}
+.docn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.docn.t{color:var(--tbc)}
+.offtxt{color:var(--muted)}
+.flags{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.pill{font-size:11px;border-radius:99px;padding:1px 8px;white-space:nowrap;font-weight:500;display:inline-block}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.tbc{background:var(--tbc-bg);color:var(--tbc)}
+.pill.learn{background:var(--c-bg);color:var(--c)}
+.pill.ot{background:var(--a-bg);color:var(--a)}
+.pill.edit{background:var(--b-bg);color:var(--b)}
+.detail{padding:2px 14px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:14px}
+.sess{padding-top:12px;border-bottom:1px dashed var(--line);padding-bottom:14px}
+.sh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sh .big{font-size:17px;font-weight:700}
+.meta{color:var(--muted);font-size:13px;margin:2px 0 6px}
+.doc{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin:4px 0 2px}
+.doc b{font-size:16px}
+.hint{font-size:12px;color:var(--muted)}
+.rec{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 4px}
+.rec label{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+.rec input,.docin,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--ink);width:100%;min-width:0}
+.rec input{font-family:var(--mono);font-size:16px}
+.docin{font-size:14px;margin-top:6px}
+.mw{font-size:12px;color:var(--warn);min-height:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:13px;display:inline-flex;gap:6px;align-items:baseline}
+.chip i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.chip.same{background:var(--b-bg);border-color:transparent}
+.lbl{font-size:12px;color:var(--muted);letter-spacing:.06em;margin:8px 0 4px}
+details.more summary{cursor:pointer;color:var(--accent);font-size:13px;margin-top:8px}
+.daybox{display:flex;flex-direction:column;gap:8px}
+.chk{display:flex;gap:10px;align-items:center;font-weight:500;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.chk input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.chk small{color:var(--muted);font-weight:400}
+textarea{min-height:70px;resize:vertical;font-size:14px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.dow{text-align:center;font-size:12px;color:var(--muted)}
+.cell{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:8px;min-height:84px;padding:4px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cell:focus-visible{outline:2px solid var(--accent)}
+.cell.off{background:var(--off)} .cell.empty{visibility:hidden}
+.cell .n{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+.cell .tg{font-family:var(--mono);font-size:11px;font-weight:600;border-radius:4px;padding:0 3px;overflow:hidden;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot.w{background:var(--warn)} .dot.g{background:var(--ok)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted);align-items:center}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.tile .k{font-size:12px;color:var(--muted)}
+.tile .v{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1.2}
+.tile .v small{font-size:13px;font-family:var(--font);color:var(--muted);font-weight:400}
+.sec{font-size:14px;font-weight:700;margin:18px 0 8px}
+.todo{display:flex;flex-wrap:wrap;gap:6px}
+.todo button{background:var(--warn-bg);color:var(--warn);border:0;border-radius:8px;padding:4px 10px;cursor:pointer;font-family:var(--mono)}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.foot{margin-top:20px;font-size:12px;color:var(--muted);line-height:1.8}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:10px;font-size:13px;z-index:20}
+@media(max-width:420px){.sum{grid-template-columns:46px 1fr auto;gap:8px}.cell{min-height:72px}.cell .tg{font-size:10px}.rec{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.row2{display:flex;gap:6px;align-items:center;margin-top:6px}.row2 .docin{margin-top:0;flex:1}.row2 .ghost{flex:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="top">
+    <div><h1 id="ttl">班表</h1><div class="sub" id="subt">門診內科組</div></div>
+    <div class="hdr-r"><select id="mSel" aria-label="切換月份"></select><button class="ghost" id="bImpX">匯入班表</button></div>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tabList" aria-selected="true">每日班表</button>
+    <button class="tab" role="tab" id="tabCal" aria-selected="false">月曆</button>
+    <button class="tab" role="tab" id="tabStat" aria-selected="false">月統計</button>
+  </div>
+</header>
+<div id="impPanel"></div>
+<main id="main"></main>
+<div class="foot" id="foot"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="fileIn" accept="application/json,.json" hidden>
+<input type="file" id="xlsIn" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+
+<script>
+/* 內建資料:診間科別與 10 月門診表醫師(不含任何班表或同事資料) */
+const DEPT={"212":["內分泌暨新陳代謝科"],"223":["內分泌暨新陳代謝科"],"214":["胃腸肝膽內科"],"215":["胃腸肝膽內科"],"216":["胃腸肝膽內科"],"217":["胃腸肝膽內科"],"218":["血液腫瘤科","風濕免疫科"],"219":["血液腫瘤科"],"220":["一般內科","心臟內科","風濕免疫科"],"221":["感染科"],"224":["腎臟內科"],"225":["腎臟內科"],"229":["心臟內科"],"230":["心臟內科"],"231":["心臟內科"],"232":["心臟內科"],"234":["心臟內科"],"233":["神經內科","內分泌暨新陳代謝科"],"235":["麻醉/疼痛科","心臟內科"],"249":["神經內科"],"250":["神經內科"],"252":["神經內科"],"254":["家庭醫學科","精神科"],"255":["家庭醫學科"],"265":["精神科"],"266":["精神科"],"205":["胸腔內科"],"205A":["胸腔內科"],"206":["胸腔內科"],"1302":["心臟內科"],"306":["皮膚科"],"314":["泌尿科","智慧科學體重管理中心"],"312":["血液腫瘤科"]};
+const DEPT_OVR={"233|三|A":["神經內科"],"235|三|A":[]};
+const DOCTBL={"212|二|A":{"st":"ok","names":["陳芳瑜"],"note":""},"212|三|B":{"st":"ok","names":["陳芳瑜"],"note":""},"212|四|A":{"st":"ok","names":["郭俊亨"],"note":""},"212|四|B":{"st":"ok","names":["裴駒"],"note":"14:00 開始看診,16:30 截止報到"},"214|二|B":{"st":"ok","names":["陳昱宗"],"note":""},"214|三|B":{"st":"ok","names":["邱毓澤"],"note":""},"215|五|A":{"st":"ok","names":["凌澤民"],"note":""},"216|二|B":{"st":"ok","names":["黃俊穎"],"note":""},"216|四|B":{"st":"ok","names":["李輔仁"],"note":""},"219|三|A":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"},"221|四|A":{"st":"ok","names":["李宜謙"],"note":""},"221|五|B":{"st":"ok","names":["王宇平"],"note":""},"223|一|B":{"st":"ok","names":["郭俊亨"],"note":""},"223|二|A":{"st":"ok","names":["郭俊亨"],"note":""},"223|五|A":{"st":"cond","names":["郭俊亨"],"note":"10 月表註明僅 10/16、10/23 看診,11 月是否相同需確認"},"223|五|B":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"},"224|一|A":{"st":"ok","names":["盧建霖"],"note":""},"224|五|A":{"st":"ok","names":["簡明弘"],"note":""},"225|一|A":{"st":"ok","names":["簡明弘"],"note":""},"225|三|A":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"},"225|六|A":{"st":"tbc","names":[],"note":"10 月週六輪值:李宗育(10/3、10/31)、高芷華(10/24),11/7 輪到誰需確認"},"229|一|A":{"st":"ok","names":["葉東峰"],"note":""},"229|五|B":{"st":"ok","names":["蔡天堯"],"note":""},"230|五|A":{"st":"ok","names":["莊宗達"],"note":""},"230|五|B":{"st":"ok","names":["施振祥"],"note":""},"231|三|B":{"st":"ok","names":["莊宗達"],"note":""},"231|四|B":{"st":"ok","names":["葉東峰"],"note":""},"232|一|A":{"st":"ok","names":["林冠佑"],"note":""},"233|三|A":{"st":"ok","names":["陳彥銘"],"note":"10 月表內分泌列另有黃俐穎標示「235 診」"},"234|四|A":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"},"235|三|A":{"st":"tbc","names":[],"note":"10 月表內分泌列標示黃俐穎在 235 診,心臟內科與麻醉疼痛科此時段無人,請對照 11 月門診表"},"255|一|B":{"st":"ok","names":["林嘉俊"],"note":""},"255|二|B":{"st":"ok","names":["沈偉宏"],"note":""},"255|四|A":{"st":"ok","names":["林敬偉"],"note":""},"255|六|A":{"st":"ok","names":["林嘉俊"],"note":""},"265|三|B":{"st":"tbc","names":[],"note":"10 月表只有張達人,且註明僅 10/14、10/28 看診"},"306|四|B":{"st":"ok","names":["羅婉心"],"note":"限約診"},"314|二|B":{"st":"tbc","names":[],"note":"10 月表此時段沒有排醫師"}};
+const DOC_SOURCE='10 月門診表(參考)';
+const KEY='zwq_records_v2', KEY_M='zwq_months_v2', KEY_D='zwq_docmap_v2', KEY_N='zwq_name_v2';
+const SN={A:'早診',B:'午診',C:'夜診'};
+const WD=['日','一','二','三','四','五','六'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=id=>document.getElementById(id);
+function load(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}}
+let storageOk=true;
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){storageOk=false;toast('此瀏覽器無法儲存資料,請用「備份」匯出')}}
+let R=load(KEY,{}), MONTHS=load(KEY_M,{}), UMAP=load(KEY_D,{});
+let NAME=''; try{NAME=localStorage.getItem(KEY_N)||''}catch(e){}
+if(!NAME)NAME='張琬晴';
+let ym=null, view='list', open=new Set(), pending=null;
+const yms=()=>Object.keys(MONTHS).sort();
+const mon=()=>MONTHS[ym];
+const ymParts=()=>ym.split('-').map(Number);
+const monthLabel=k=>{const [y,m]=k.split('-').map(Number);return `${y-1911}年${m}月`};
+function pickYm(){const n=new Date(),k=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');const l=yms();ym=l.includes(k)?k:(l[l.length-1]||null)}
+
+/* ---------- records: R[ym][day][shift|chk|note] ---------- */
+function dayRec(d){return (R[ym]||{})[d]||{}}
+function shiftRec(d,k){return dayRec(d)[k]||{}}
+function setField(d,k,f,v){
+  R[ym]=R[ym]||{}; const day=R[ym][d]=R[ym][d]||{};
+  const empty=(v===''||v==null||v===false||(typeof v==='number'&&isNaN(v)));
+  if(k){const s=day[k]=day[k]||{}; if(empty)delete s[f]; else s[f]=v; if(!Object.keys(s).length)delete day[k]}
+  else{if(empty)delete day[f]; else day[f]=v}
+  if(!Object.keys(day).length)delete R[ym][d];
+  save(KEY,R);
+}
+const num=v=>{if(v===''||v==null)return '';const n=parseInt(v,10);return isNaN(n)||n<0?'':n};
+
+/* ---------- derived ---------- */
+const isOff=e=>!e.sess.A&&!e.sess.B&&!e.sess.C;
+const shiftKeys=e=>['A','B','C'].filter(k=>e.sess[k]);
+function shiftTotal(d,k){const r=shiftRec(d,k);if(r.total!==undefined)return r.total;if(r.first!==undefined||r.follow!==undefined)return (r.first||0)+(r.follow||0);return null}
+function dayOT(d,e){return shiftKeys(e).reduce((a,k)=>a+(shiftRec(d,k).ot||0),0)}
+const docKey=(e,k)=>`${e.sess[k].room}|${e.wd}|${k}`;
+function deptsOf(e,k){const s=e.sess[k];if(!s.room)return [];const key=docKey(e,k);return DEPT_OVR[key]||DEPT[s.room]||[]}
+function deptTxt(e,k){const s=e.sess[k],d=deptsOf(e,k);return d.length?d.join(' ／ '):(s.room?'待確認':(s.label||''))}
+function docInfo(d,k,e){
+  const s=e.sess[k],o=shiftRec(d,k).doc;
+  if(o)return {text:o,kind:'edit',hint:''};
+  if(!s.room)return {text:'',kind:'na',hint:''};
+  const key=docKey(e,k),x=UMAP[key]||DOCTBL[key];
+  if(!x)return {text:'待確認',kind:'tbc',hint:'門診表沒有這個診間與時段的資料,請手動填入'};
+  if(x.st==='ok')return {text:x.names.join('、'),kind:'ok',hint:x.note||''};
+  if(x.st==='cond')return {text:x.names.join('、'),kind:'cond',hint:x.note||''};
+  return {text:'待確認',kind:'tbc',hint:x.note||''};
+}
+
+/* ---------- list ---------- */
+function sumHtml(e){
+  const d=e.d,off=isOff(e),we=e.wd==='日'||e.wd==='六',ot=dayOT(d,e),rec=dayRec(d);
+  const lines=off?`<span class="offtxt">休假</span>`:shiftKeys(e).map(k=>{
+    const s=e.sess[k],di=docInfo(d,k,e);
+    return `<div class="line"><span class="badge s${k}">${k}</span><span class="room">${esc(s.room?s.room+'診':(s.label||k))}</span><span class="docn${di.kind==='tbc'?' t':''}">${esc(di.text)}</span>${s.learn?'<span class="pill learn">學</span>':''}</div>`}).join('');
+  const f=[];
+  if(shiftKeys(e).some(k=>e.sess[k].stopped))f.push('<span class="pill warn">停診</span>');
+  if(ot>0)f.push(`<span class="pill ot">加班 ${ot} 分</span>`);
+  if(!off&&ot>0&&!rec.chk)f.push('<span class="pill warn">未檢核</span>');
+  if(rec.chk)f.push('<span class="pill ok">已檢核</span>');
+  return `<div class="dt${we?' we':''}"><div class="n">${ymParts()[1]}/${d}</div><div class="w">週${e.wd}</div></div><div class="lines">${lines}</div><div class="flags">${f.join('')}</div>`;
+}
+function mismatch(r){
+  if(r.total!==undefined&&(r.first!==undefined||r.follow!==undefined)){const s=(r.first||0)+(r.follow||0);if(s!==r.total)return `初診 + 復診 = ${s},與總人數 ${r.total} 不一致`}
+  return '';
+}
+function detailHtml(e){
+  const d=e.d; let h='<div class="detail">';
+  for(const k of shiftKeys(e)){
+    const s=e.sess[k],r=shiftRec(d,k),di=docInfo(d,k,e),ms=e.mates[k]||[];
+    const same=ms.filter(m=>m.same),rest=ms.filter(m=>!m.same);
+    const chip=m=>`<span class="chip${m.same?' same':''}">${esc(m.n)}<i>${m.room||((m.star?'＊':'')+esc(m.label||''))}</i></span>`;
+    const dp=deptsOf(e,k).length>1?'(共用診間,依當日門診表確認)':'';
+    h+=`<section class="sess"><div class="sh"><span class="badge s${k}">${k}</span><span class="big">${SN[k]} · ${esc(s.room?s.room+' 診':(s.label||''))}</span>${s.stopped?'<span class="pill warn">當日停診</span>':''}${s.learn?'<span class="pill learn">學習</span>':''}</div>
+    <div class="meta">${s.floor?s.floor+' · ':''}${esc(deptTxt(e,k))}${dp}</div>
+    <div class="doc"><span class="hint">醫師</span>${di.kind==='tbc'?'<span class="pill tbc">待確認</span>':`<b>${esc(di.text||'—')}</b>`}${di.kind==='edit'?'<span class="pill edit">手動修正</span>':''}${di.kind==='cond'?'<span class="pill tbc">日期條件</span>':''}</div>
+    ${di.hint?`<div class="hint">${esc(di.hint)}</div>`:''}
+    ${s.room?`<div class="row2"><input class="docin" data-d="${d}" data-k="${k}" data-f="doc" value="${esc(r.doc||'')}" placeholder="手動填醫師姓名(留空 = 依門診表)" aria-label="${SN[k]}醫師手動修正"><button class="ghost" data-apply="${d}|${k}">套用到每週同診間時段</button></div>`:''}
+    <div class="rec">
+      <label>加班(分鐘)<input type="number" inputmode="numeric" min="0" step="1" data-d="${d}" data-k="${k}" data-f="ot" value="${r.ot??''}" placeholder="0"></label>
+      <label>初診<input type="number" inputmode="numeric" min="0" step="1" data-d="${d}" data-k="${k}" data-f="first" value="${r.first??''}"></label>
+      <label>復診<input type="number" inputmode="numeric" min="0" step="1" data-d="${d}" data-k="${k}" data-f="follow" value="${r.follow??''}"></label>
+      <label>總人數<input type="number" inputmode="numeric" min="0" step="1" data-d="${d}" data-k="${k}" data-f="total" value="${r.total??''}" placeholder="${r.first!==undefined||r.follow!==undefined?(r.first||0)+(r.follow||0):'自動'}"></label>
+    </div><div class="mw" id="mw-${d}-${k}">${mismatch(r)}</div>
+    <div class="lbl">同診間 ${same.length} 人</div>
+    <div class="chips">${same.length?same.map(chip).join(''):'<span class="offtxt">無</span>'}</div>
+    <details class="more"><summary>同班其他人(${rest.length} 人)</summary><div class="chips" style="margin-top:8px">${rest.map(chip).join('')}</div></details></section>`;
+  }
+  if(e.stop.length||e.sup.length)h+=`<div class="hint">${e.stop.length?'當日停診:'+esc(e.stop.join('、')):''}${e.stop.length&&e.sup.length?'<br>':''}${e.sup.length?'支援:'+esc(e.sup.join('、')):''}</div>`;
+  const rec=dayRec(d);
+  h+=`<div class="daybox"><label class="chk"><input type="checkbox" data-d="${d}" data-f="chk" ${rec.chk?'checked':''}><span>已上傳檢核<br><small>自行勾選確認,不代表系統已驗證</small></span></label>
+  <div><div class="lbl">備註(請勿填病人姓名或病歷號)</div><textarea data-d="${d}" data-f="note" placeholder="例:交班事項、換班對象">${esc(rec.note||'')}</textarea></div></div></div>`;
+  return h;
+}
+function isToday(d){const t=new Date(),[y,m]=ymParts();return t.getFullYear()===y&&t.getMonth()+1===m&&t.getDate()===d}
+function dayCard(e){
+  const off=isOff(e);
+  return `<article class="day${off?' off':''}${isToday(e.d)?' today':''}" id="d${e.d}"><button class="sum" data-sum="${e.d}" aria-expanded="${open.has(e.d)}">${sumHtml(e)}</button><div class="dw">${open.has(e.d)&&!off?detailHtml(e):''}</div></article>`;
+}
+
+/* ---------- calendar ---------- */
+function calHtml(){
+  const [y,m]=ymParts(),first=new Date(y,m-1,1).getDay();
+  let h='<div class="cal">'+WD.map(x=>`<div class="dow">${x}</div>`).join('');
+  for(let i=0;i<first;i++)h+='<div class="cell empty"></div>';
+  for(const e of mon().days){
+    const ot=dayOT(e.d,e),rec=dayRec(e.d);
+    const dot=rec.chk?'<span class="dot g" title="已檢核"></span>':(ot>0?'<span class="dot w" title="未檢核"></span>':'');
+    const tg=shiftKeys(e).map(k=>`<span class="tg s${k}">${esc(e.sess[k].room||e.sess[k].label||k)}</span>`).join('');
+    h+=`<button class="cell${isOff(e)?' off':''}" data-go="${e.d}"><span class="n"><span>${e.d}</span>${dot}</span>${tg}</button>`;
+  }
+  return h+'</div><div class="legend"><span><span class="badge sA">A</span> 早診</span><span><span class="badge sB">B</span> 午診</span><span><span class="badge sC">C</span> 夜診</span><span><span class="dot w"></span> 有加班未檢核</span><span><span class="dot g"></span> 已檢核</span></div>';
+}
+
+/* ---------- stats ---------- */
+function stats(){
+  let ot=0,tot=0,first=0,follow=0,cnt=0,work=0,a=0,b=0,c=0,chk=0,unchk=[],tbc=0;
+  for(const e of mon().days){
+    if(!isOff(e))work++;
+    const d=e.d,rec=dayRec(d);let dOt=0;
+    for(const k of shiftKeys(e)){
+      if(k==='A')a++;if(k==='B')b++;if(k==='C')c++;
+      const r=shiftRec(d,k);dOt+=r.ot||0;first+=r.first||0;follow+=r.follow||0;
+      const t=shiftTotal(d,k);if(t!==null){tot+=t;cnt++}
+      if(docInfo(d,k,e).kind==='tbc')tbc++;
+    }
+    ot+=dOt;if(rec.chk)chk++;else if(dOt>0)unchk.push(d);
+  }
+  return {ot,tot,first,follow,avg:cnt?tot/cnt:null,cnt,work,a,b,c,chk,unchk,tbc};
+}
+function statHtml(){
+  const s=stats(),[,m]=ymParts();
+  return `<div class="tiles">
+  <div class="tile"><div class="k">加班總分鐘</div><div class="v">${s.ot}<small> 分</small></div>${s.ot?`<div class="hint">= ${Math.floor(s.ot/60)} 小時 ${s.ot%60} 分</div>`:''}</div>
+  <div class="tile"><div class="k">看診總人數</div><div class="v">${s.tot}<small> 人</small></div></div>
+  <div class="tile"><div class="k">初診合計</div><div class="v">${s.first}</div></div>
+  <div class="tile"><div class="k">復診合計</div><div class="v">${s.follow}</div></div>
+  <div class="tile"><div class="k">平均每班看診</div><div class="v">${s.avg===null?'—':s.avg.toFixed(1)}<small> 人</small></div><div class="hint">以有填人數的 ${s.cnt} 班計算</div></div>
+  <div class="tile"><div class="k">上班天數</div><div class="v">${s.work}<small> 天</small></div><div class="hint">早 ${s.a} · 午 ${s.b} · 夜 ${s.c}</div></div>
+  <div class="tile"><div class="k">加班已勾選檢核</div><div class="v">${s.chk}<small> 天</small></div></div>
+  <div class="tile"><div class="k">有加班未勾選</div><div class="v">${s.unchk.length}<small> 天</small></div></div></div>
+  <div class="sec">未檢核的日期(有加班分鐘、尚未勾選)</div>
+  <div class="todo">${s.unchk.length?s.unchk.map(d=>`<button data-go="${d}">${m}/${d}</button>`).join(''):'<span class="offtxt">沒有</span>'}</div>
+  <div class="sec">醫師待確認</div><div class="hint">${s.tbc} 個班的醫師無法從門診表確認,已標「待確認」。</div>
+  <div class="sec">資料與備份</div>
+  <div class="tools"><button class="ghost" id="bCsv">匯出 CSV</button><button class="ghost" id="bJson">備份 JSON</button><button class="ghost" id="bImp">匯入備份</button></div>
+  <div class="hint" style="margin-top:8px">資料只存在這支手機的瀏覽器裡,清除瀏覽資料或換手機會消失,請定期備份。匯入備份不會覆蓋已填的欄位。備份檔也可放入醫師對照檔(doctors.json)。</div>`;
+}
+
+/* ---------- render ---------- */
+function render(){
+  const m=$('main');
+  $('ttl').textContent=(NAME||'')+'班表';
+  const emp=ym&&mon().emp;
+  $('subt').textContent='門診內科組'+(emp?' · 員編 '+emp:'');
+  $('mSel').innerHTML=yms().map(k=>`<option value="${k}">${esc(monthLabel(k))}</option>`).join('');
+  $('mSel').hidden=!yms().length;
+  if(ym)$('mSel').value=ym;
+  if(!ym){
+    m.innerHTML=`<div class="empty-state"><b>還沒有班表</b><div class="hint">按右上角「匯入班表」,選擇醫院內科組的班表 Excel(.xlsx)。檔案只在這支手機上讀取,不會上傳到任何地方。</div><div><button class="pri" id="bImpY">選擇班表檔案</button></div></div>`;
+    $('foot').textContent='';
+  }else{
+    if(view==='list')m.innerHTML=mon().days.map(dayCard).join('');
+    else if(view==='cal')m.innerHTML=calHtml();
+    else m.innerHTML=statHtml();
+    $('foot').innerHTML=`醫師來源:${esc(DOC_SOURCE)},依診間 + 星期 + 時段對照。資料有日期條件或空白時標示「待確認」,不會自行猜測,可在每班手動修正。<br>診號為班表代碼(例:A24 = 早診、224 診)。代碼後綴「學」標示為學習;「＊」原班表未註明。`;
+  }
+  [['tabList','list'],['tabCal','cal'],['tabStat','stat']].forEach(([id,v])=>$(id).setAttribute('aria-selected',String(v===view)));
+}
+function setView(v){view=v;render();if(v!=='list')window.scrollTo(0,0)}
+$('tabList').onclick=()=>setView('list');$('tabCal').onclick=()=>setView('cal');$('tabStat').onclick=()=>setView('stat');
+$('mSel').onchange=e=>{ym=e.target.value;open=new Set();initOpen();render()};
+function initOpen(){if(!ym)return;const f=mon().days.find(e=>isToday(e.d))||mon().days.find(e=>!isOff(e));if(f)open.add(f.d)}
+
+/* ---------- events ---------- */
+function refreshSum(d){const e=mon().days.find(x=>x.d===d);const b=document.querySelector(`#d${d} .sum`);if(b)b.innerHTML=sumHtml(e)}
+$('main').addEventListener('click',ev=>{
+  const t=ev.target;
+  if(t.id==='bImpY'){$('xlsIn').click();return}
+  const ap=t.closest('[data-apply]');
+  if(ap){const [d,k]=ap.dataset.apply.split('|');const e=mon().days.find(x=>x.d===+d);const v=(shiftRec(+d,k).doc||'').trim();
+    if(!v){toast('請先在上方填醫師姓名');return}
+    UMAP[docKey(e,k)]={st:'ok',names:[v],note:'手動設定,套用到每週相同診間與時段'};save(KEY_D,UMAP);
+    setField(+d,k,'doc','');open.add(+d);render();toast(`已套用:${e.sess[k].room} 診 週${e.wd} ${SN[k]} = ${v}`);return}
+  const go=t.closest('[data-go]');
+  if(go){const d=+go.dataset.go;open.add(d);setView('list');requestAnimationFrame(()=>{const el=$('d'+d);if(el)el.scrollIntoView({block:'start'})});return}
+  const sum=t.closest('[data-sum]');
+  if(sum){const d=+sum.dataset.sum,e=mon().days.find(x=>x.d===d);if(isOff(e))return;
+    open.has(d)?open.delete(d):open.add(d);
+    sum.setAttribute('aria-expanded',open.has(d));
+    sum.nextElementSibling.innerHTML=open.has(d)?detailHtml(e):'';return}
+  if(t.id==='bCsv')exportCsv();
+  if(t.id==='bJson')exportJson();
+  if(t.id==='bImp')$('fileIn').click();
+});
+$('main').addEventListener('input',ev=>{
+  const t=ev.target;if(!t.dataset||!t.dataset.f||t.type==='checkbox')return;
+  const d=+t.dataset.d,k=t.dataset.k||null,f=t.dataset.f;
+  let v=t.value;
+  if(['ot','first','follow','total'].includes(f))v=num(v);
+  else if(f==='doc'||f==='note')v=v.trim()?v:'';
+  setField(d,k,f,v);
+  if(k){
+    const r=shiftRec(d,k),mw=$(`mw-${d}-${k}`);if(mw)mw.textContent=mismatch(r);
+    if(f==='first'||f==='follow'){const tl=t.closest('.sess').querySelector('[data-f="total"]');if(tl&&r.total===undefined)tl.placeholder=(r.first!==undefined||r.follow!==undefined)?(r.first||0)+(r.follow||0):'自動'}
+  }
+  refreshSum(d);
+});
+$('main').addEventListener('change',ev=>{
+  const t=ev.target;if(t.dataset&&t.dataset.f==='chk'){setField(+t.dataset.d,null,'chk',t.checked||'');refreshSum(+t.dataset.d)}
+});
+
+/* ---------- export / backup ---------- */
+function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600)}
+function saveFile(name,text,type){
+  const blob=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);toast('已匯出 '+name);
+}
+function exportCsv(){
+  const rows=[['月份','日期','星期','班別','診號','樓層','科別','醫師','醫師狀態','加班分鐘','初診','復診','總人數','已上傳檢核','備註']];
+  const [,m]=ymParts();
+  for(const e of mon().days){
+    if(isOff(e)){rows.push([ym,`${m}/${e.d}`,'週'+e.wd,'休']);continue}
+    const rec=dayRec(e.d);
+    shiftKeys(e).forEach((k,i)=>{
+      const s=e.sess[k],r=shiftRec(e.d,k),di=docInfo(e.d,k,e),t=shiftTotal(e.d,k);
+      rows.push([ym,`${m}/${e.d}`,'週'+e.wd,SN[k],s.room||s.label,s.floor,deptTxt(e,k),di.text,{ok:'依門診表',cond:'日期條件待確認',tbc:'待確認',edit:'手動修正',na:''}[di.kind],r.ot??'',r.first??'',r.follow??'',t??'',rec.chk?'是':'否',i===0?(rec.note||''):'']);
+    });
+  }
+  const csv='﻿'+rows.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  saveFile(`${NAME}_${ym}_紀錄.csv`,csv,'text/csv;charset=utf-8');
+}
+function exportJson(){saveFile('班表備份.json',JSON.stringify({app:'zwq-schedule',v:3,records:R,doctors:UMAP},null,1),'application/json')}
+$('fileIn').onchange=async ev=>{
+  const f=ev.target.files[0];ev.target.value='';if(!f)return;
+  try{
+    const j=JSON.parse(await f.text());if(j.app!=='zwq-schedule')throw 0;
+    let n=0;
+    for(const [m,days] of Object.entries(j.records||{}))for(const [d,rec] of Object.entries(days))for(const [k,v] of Object.entries(rec)){
+      R[m]=R[m]||{};const day=R[m][d]=R[m][d]||{};
+      if(v&&typeof v==='object'){const s=day[k]=day[k]||{};for(const [ff,vv] of Object.entries(v))if(s[ff]===undefined){s[ff]=vv;n++}}
+      else if(day[k]===undefined){day[k]=v;n++}
+    }
+    for(const [k,v] of Object.entries(j.doctors||{}))if(!UMAP[k]){UMAP[k]=v;n++}
+    save(KEY,R);save(KEY_D,UMAP);render();toast(`已匯入 ${n} 筆(已有的欄位不覆蓋)`);
+  }catch(e){toast('檔案格式不正確')}
+};
+
+/* ---------- xlsx reader (no library) ---------- */
+async function readXlsx(buf){
+  const u8=new Uint8Array(buf),dv=new DataView(buf),td=new TextDecoder();
+  let i=u8.length-22;while(i>=0&&dv.getUint32(i,true)!==0x06054b50)i--;
+  if(i<0)throw new Error('不是 xlsx 檔案');
+  const n=dv.getUint16(i+10,true),files={};let p=dv.getUint32(i+16,true);
+  for(let k=0;k<n;k++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true),csize=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+    files[td.decode(u8.subarray(p+46,p+46+nl))]={method,csize,lo};p+=46+nl+el+cl;
+  }
+  async function text(name){
+    const f=files[name];if(!f)return null;
+    const start=f.lo+30+dv.getUint16(f.lo+26,true)+dv.getUint16(f.lo+28,true),data=u8.subarray(start,start+f.csize);
+    if(f.method===0)return td.decode(data);
+    if(typeof DecompressionStream==='undefined')throw new Error('這個瀏覽器版本太舊,無法讀取 xlsx,請更新瀏覽器');
+    return await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+  }
+  const xml=s=>new DOMParser().parseFromString(s,'application/xml');
+  const wb=xml(await text('xl/workbook.xml')),rels=xml(await text('xl/_rels/workbook.xml.rels'));
+  const relMap={};for(const r of rels.getElementsByTagName('Relationship'))relMap[r.getAttribute('Id')]=r.getAttribute('Target');
+  const ss=[];const sst=await text('xl/sharedStrings.xml');
+  if(sst)for(const si of xml(sst).getElementsByTagName('si'))ss.push([...si.getElementsByTagName('t')].map(t=>t.textContent).join(''));
+  const sheets=[];
+  for(const s of wb.getElementsByTagName('sheet')){
+    const rid=s.getAttribute('r:id')||s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+    let tg=relMap[rid]||'';tg=tg.replace(/^\/?(xl\/)?/,'');
+    sheets.push({name:s.getAttribute('name'),path:'xl/'+tg});
+  }
+  const colNum=ref=>{let c=0;for(const ch of ref.replace(/\d/g,''))c=c*26+ch.charCodeAt(0)-64;return c};
+  async function sheetCells(path){
+    const doc=xml(await text(path)),cells={};let maxR=0;
+    for(const c of doc.getElementsByTagName('c')){
+      const ref=c.getAttribute('r'),t=c.getAttribute('t'),vEl=c.getElementsByTagName('v')[0];
+      let v=null;
+      if(t==='inlineStr')v=[...c.getElementsByTagName('t')].map(x=>x.textContent).join('');
+      else if(vEl){const raw=vEl.textContent;v=t==='s'?ss[+raw]:(t==='str'||t==='e'||t==='b')?raw:Number(raw)}
+      if(v===null||v==='')continue;
+      const r=+ref.replace(/\D/g,''),cc=colNum(ref);cells[r+','+cc]=v;if(r>maxR)maxR=r;
+    }
+    return {get:(r,c)=>{const v=cells[r+','+c];return v===undefined?null:v},maxR};
+  }
+  return {sheets,sheetCells};
+}
+
+/* ---------- schedule parsing ---------- */
+function parseCell(v,rowSess){
+  if(v==null)return null;let s=String(v).trim();if(!s||s==='OFF')return null;
+  if(['特休','補','病假','特'].includes(s))return {leave:s};
+  const m=s.match(/^(AB|BB|A|B|C)([\s\S]*)$/);let sess=[rowSess],rest=s;
+  if(m){rest=m[2];sess=m[1]==='AB'?['A','B']:[m[1][0]]}
+  const learn=rest.includes('學');rest=rest.replace(/學/g,'');
+  let star=false;if(rest.startsWith('*')){star=true;rest=rest.slice(1)}
+  let room='',label='';const mm=rest.match(/^(\d{3,4}A?|\d{1,2})([\s\S]*)$/);
+  if(mm){room=mm[1];if(room.length<=2)room='2'+room.padStart(2,'0');label=mm[2]}else label=rest;
+  return {sess,room,label:label.trim(),star,learn,raw:s};
+}
+const floorOf=room=>room.startsWith('1302')?'':('234'.includes(room[0])?room[0]+'F':'');
+const cleanName=s=>String(s).replace(/\s*[\(（].*?[\)）]/g,'').trim();
+function serialToDate(v){return new Date(Math.round((v-25569)*86400000))}
+function listPeople(sh){
+  const out=[];
+  for(let r=7;r<=sh.maxR;r++){
+    const a=sh.get(r,1),e=sh.get(r,5);
+    if(typeof a==='number'&&Number.isInteger(a)&&e)out.push({r,name:String(e).trim(),role:String(sh.get(r,2)||''),emp:String(sh.get(r,4)||'').trim()});
+  }
+  return out;
+}
+function buildMonth(sh,people,me){
+  const cols=[];
+  for(let c=6;c<80;c++){const v=sh.get(3,c);if(typeof v==='number'&&v>40000)cols.push([c,serialToDate(v)]);else break}
+  if(!cols.length)throw new Error('找不到日期列(第 3 列)');
+  const first=cols[0][1],key=first.getUTCFullYear()+'-'+String(first.getUTCMonth()+1).padStart(2,'0');
+  const days=[];
+  for(const [c,dt] of cols){
+    const d=dt.getUTCDate(),wd=WD[dt.getUTCDay()];
+    const split=v=>String(v==null?'':v).split('\n').map(x=>x.trim()).filter(Boolean);
+    const stop=split(sh.get(6,c)),sup=split(sh.get(5,c));
+    const e={d,wd,stop,sup,sess:{},mates:{}};
+    ['A','B','C'].forEach((sl,i)=>{
+      const p=parseCell(sh.get(me.r-1+i,c),sl);
+      if(p&&p.sess)for(const s of p.sess){
+        const base=p.room?s+p.room:s+p.label;
+        e.sess[s]={room:p.room,label:p.label,star:p.star,learn:p.learn,raw:p.raw,floor:floorOf(p.room),stopped:stop.some(x=>x===base||x==='AB'+p.room)};
+      }
+    });
+    for(const s of ['A','B','C']){
+      const ms=[];
+      for(const pr of people){
+        if(pr.r===me.r)continue;
+        for(let i=0;i<3;i++){
+          const p=parseCell(sh.get(pr.r-1+i,c),'ABC'[i]);
+          if(p&&p.sess&&p.sess.includes(s)){
+            ms.push({n:cleanName(pr.name),r:pr.role.includes('助')?'診助':'護',room:p.room,label:p.label,star:p.star,same:!!(p.room&&e.sess[s]&&e.sess[s].room===p.room)});
+            break;
+          }
+        }
+      }
+      ms.sort((a,b)=>(a.same===b.same?0:a.same?-1:1)||(a.room||'zzz').localeCompare(b.room||'zzz')||a.label.localeCompare(b.label));
+      e.mates[s]=ms;
+    }
+    days.push(e);
+  }
+  return {ym:key,month:{label:monthLabel(key),emp:me.emp,person:cleanName(me.name),days}};
+}
+
+/* ---------- import panel ---------- */
+$('bImpX').onclick=()=>$('xlsIn').click();
+$('xlsIn').onchange=async ev=>{
+  const f=ev.target.files[0];ev.target.value='';if(!f)return;
+  try{
+    const x=await readXlsx(await f.arrayBuffer());
+    const sheet=x.sheets.find(s=>/內科/.test(s.name))||x.sheets[0];
+    const sh=await x.sheetCells(sheet.path);
+    pending={file:f.name,sheetName:sheet.name,sh,people:listPeople(sh),sel:null};
+    if(!pending.people.length)throw new Error('找不到人員資料(第 A 欄編號、E 欄姓名)');
+    analyze();
+  }catch(e){pending=null;showPanel(`<h2>無法讀取班表</h2><div class="hint">${esc(e.message||e)}</div><div class="row"><button class="ghost" data-imp="cancel">關閉</button></div>`)}
+};
+function showPanel(h){$('impPanel').innerHTML=h?`<div class="panel">${h}</div>`:''}
+function analyze(){
+  const p=pending,matches=p.people.filter(x=>cleanName(x.name).includes(NAME));
+  p.matches=matches;
+  if(matches.length===1)p.sel=matches[0].r;else if(!matches.some(x=>x.r===p.sel))p.sel=null;
+  let h=`<h2>匯入班表</h2><div class="hint">${esc(p.file)} · 工作表「${esc(p.sheetName)}」</div>
+  <div class="row"><label class="hint">要找的姓名</label><input type="text" id="impName" value="${esc(NAME)}"><button class="ghost" data-imp="find">重新尋找</button></div>`;
+  let mo=null,err='';
+  if(!matches.length)h+=`<div class="mw">找不到「${esc(NAME)}」,請改姓名,或從下方名單選擇。</div>`;
+  if(matches.length!==1){
+    const list=matches.length?matches:p.people;
+    h+=`<div class="row"><select id="impSel"><option value="">請選擇…</option>${list.map(x=>`<option value="${x.r}"${p.sel===x.r?' selected':''}>${esc(x.name)}</option>`).join('')}</select></div>`;
+  }
+  if(p.sel){
+    try{
+      const me=p.people.find(x=>x.r===p.sel);mo=buildMonth(p.sh,p.people,me);p.built=mo;
+      const days=mo.month.days,w=days.filter(e=>!isOff(e)),cnt=k=>days.filter(e=>e.sess[k]).length;
+      const tbc=days.reduce((a,e)=>a+shiftKeys(e).filter(k=>docInfo(0,k,e).kind==='tbc').length,0);
+      h+=`<div class="tiles"><div class="tile"><div class="k">月份</div><div class="v" style="font-size:20px">${esc(mo.month.label)}</div></div><div class="tile"><div class="k">${esc(mo.month.person)}</div><div class="v" style="font-size:20px">${w.length}<small> 天上班</small></div><div class="hint">早 ${cnt('A')} · 午 ${cnt('B')} · 夜 ${cnt('C')}</div></div></div>
+      <div class="hint">同事 ${p.people.length-1} 人 · 醫師待確認 ${tbc} 個班(門診表沒有的診間時段)${MONTHS[mo.ym]?'<br><b>這個月已有班表,匯入會更新班表,你填過的加班、人數、檢核與備註都會保留。</b>':''}</div>`;
+    }catch(e){err=e.message||String(e);h+=`<div class="mw">${esc(err)}</div>`}
+  }
+  h+=`<div class="row"><button class="pri" data-imp="ok" ${mo?'':'disabled'}>確認匯入</button><button class="ghost" data-imp="cancel">取消</button></div>`;
+  showPanel(h);
+}
+$('impPanel').addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-imp]');if(!b)return;
+  const a=b.dataset.imp;
+  if(a==='cancel'){pending=null;showPanel('')}
+  if(a==='find'){const v=$('impName').value.trim();if(v){NAME=v;try{localStorage.setItem(KEY_N,NAME)}catch(e){}pending.sel=null;analyze()}}
+  if(a==='ok'&&pending&&pending.built){
+    const {ym:k,month}=pending.built;
+    NAME=cleanName(pending.people.find(x=>x.r===pending.sel).name)||NAME;try{localStorage.setItem(KEY_N,NAME)}catch(e){}
+    MONTHS[k]=month;save(KEY_M,MONTHS);ym=k;open=new Set();initOpen();pending=null;showPanel('');view='list';render();toast(`已匯入${month.label}班表`);window.scrollTo(0,0);
+  }
+});
+$('impPanel').addEventListener('change',ev=>{
+  if(ev.target.id==='impSel'){pending.sel=ev.target.value?+ev.target.value:null;analyze()}
+  if(ev.target.id==='impName'){const v=ev.target.value.trim();if(v){NAME=v;pending.sel=null;analyze()}}
+});
+
+pickYm();initOpen();render();
+if(!storageOk)toast('此瀏覽器無法儲存資料');
+</script>
+</body>
+</html>
